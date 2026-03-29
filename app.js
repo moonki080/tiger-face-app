@@ -41,8 +41,6 @@ const dom = {
   cameraStage: document.getElementById("cameraStage"),
   camera: document.getElementById("camera"),
   avatarCanvas: document.getElementById("avatarCanvas"),
-  compositeCanvas: document.getElementById("compositeCanvas"),
-  recordCanvas: document.getElementById("recordCanvas"),
   cameraStatus: document.getElementById("cameraStatus"),
   recordStatus: document.getElementById("recordStatus"),
   recordTimer: document.getElementById("recordTimer"),
@@ -72,6 +70,9 @@ const dom = {
   retakeBtn: document.getElementById("retakeBtn"),
   downloadLink: document.getElementById("downloadLink")
 };
+
+const processingCanvas = createProcessingCanvas();
+const recordingCanvas = createProcessingCanvas();
 
 const state = {
   stream: null,
@@ -220,9 +221,9 @@ function startRenderLoop() {
     if (state.recording?.isActive) {
       updateRecordingTimer(timeMs);
       drawCompositeFrame({
-        canvas: dom.recordCanvas,
-        width: dom.recordCanvas.width,
-        height: dom.recordCanvas.height
+        canvas: recordingCanvas,
+        width: recordingCanvas.width,
+        height: recordingCanvas.height
       });
     }
   };
@@ -466,21 +467,21 @@ async function handleVideoButton() {
 async function startRecording() {
   if (
     typeof MediaRecorder === "undefined" ||
-    typeof dom.recordCanvas.captureStream !== "function"
+    typeof recordingCanvas.captureStream !== "function"
   ) {
     setStatus("이 기기에서는 영상 녹화를 지원하지 않아요");
     return;
   }
 
   closeResultSheet();
-  prepareOffscreenCanvas(dom.recordCanvas);
+  prepareOffscreenCanvas(recordingCanvas);
   drawCompositeFrame({
-    canvas: dom.recordCanvas,
-    width: dom.recordCanvas.width,
-    height: dom.recordCanvas.height
+    canvas: recordingCanvas,
+    width: recordingCanvas.width,
+    height: recordingCanvas.height
   });
 
-  const stream = dom.recordCanvas.captureStream(TARGET_DETECTION_FPS);
+  const stream = recordingCanvas.captureStream(TARGET_DETECTION_FPS);
   const mimeType = pickSupportedMimeType();
   let recorder = null;
 
@@ -566,15 +567,15 @@ function finishRecording(blob, mimeType) {
 }
 
 function takePhotoSnapshot() {
-  prepareOffscreenCanvas(dom.compositeCanvas);
+  prepareOffscreenCanvas(processingCanvas);
 
   drawCompositeFrame({
-    canvas: dom.compositeCanvas,
-    width: dom.compositeCanvas.width,
-    height: dom.compositeCanvas.height
+    canvas: processingCanvas,
+    width: processingCanvas.width,
+    height: processingCanvas.height
   });
 
-  return dom.compositeCanvas.toDataURL("image/png");
+  return processingCanvas.toDataURL("image/png");
 }
 
 // The saved image/video should look like the mirrored selfie preview, so both
@@ -731,6 +732,14 @@ function prepareOffscreenCanvas(canvas) {
     canvas.width = width;
     canvas.height = height;
   }
+}
+
+function createProcessingCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  canvas.style.display = "none";
+  return canvas;
 }
 
 function setStatus(message) {
