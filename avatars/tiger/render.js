@@ -1,10 +1,21 @@
-const ORANGE_MAIN = "#ff9837";
-const ORANGE_LIGHT = "#ffc45d";
-const ORANGE_DARK = "#d65d13";
-const BROWN = "#6a3311";
-const BROWN_SOFT = "#8c4518";
-const CREAM = "#fff3d2";
-const PINK = "#ff8d93";
+const DEFAULT_MASK = Object.freeze({
+  featureColor: "#5d2f11",
+  noseColor: "#5d2f11",
+  eyeWhite: "rgba(255, 255, 255, 0.92)",
+  cheekColor: "rgba(255, 137, 111, 0.28)",
+  mouthColor: "#5a180b",
+  tongueColor: "#ff8d93",
+  eyeY: -0.12,
+  mouthY: 0.19,
+  noseY: 0.08,
+  eyeSpacing: 0.22,
+  eyeWidth: 0.085,
+  eyeHeight: 0.115,
+  stickerWidthFactor: 1.52,
+  stickerHeightFactor: 1.56,
+  anchorY: 0.54,
+  whiskers: false
+});
 
 export function renderAvatar(ctx, scene) {
   const {
@@ -12,319 +23,216 @@ export function renderAvatar(ctx, scene) {
     height,
     timeMs,
     faceDetected,
-    isRecording,
     metrics,
     motion,
-    expressions
+    expressions,
+    mask
   } = scene;
-  const size = Math.min(width, height);
+  const activeMask = {
+    ...DEFAULT_MASK,
+    ...(mask || {})
+  };
   const anchorX = Number.isFinite(motion?.x) ? motion.x : width * 0.5;
   const anchorY = Number.isFinite(motion?.y) ? motion.y : height * 0.5;
   const faceSize = Number.isFinite(motion?.size)
     ? motion.size
-    : clamp(size * 0.28, 80, 200);
-  const idleFloatY = faceDetected ? 0 : Math.sin(timeMs / 620) * size * 0.008;
-  const pulse = 1 + Math.sin(timeMs / 340) * 0.01;
-  // The signed head tilt keeps left/right leaning expressive, while the clamp
-  // avoids extreme jumps when face tracking briefly wobbles.
+    : clamp(Math.min(width, height) * 0.28, 90, 220);
+  const idleFloatY = faceDetected ? 0 : Math.sin(timeMs / 620) * faceSize * 0.03;
+  const pulse = 1 + Math.sin(timeMs / 300) * (expressions.happy ? 0.018 : 0.01);
   const tiltDegrees = faceDetected
     ? clamp(metrics.headTiltSigned, -18, 18) * 0.85
     : Math.sin(timeMs / 920) * 4;
   const mouthOpen = faceDetected ? clamp(metrics.mouthOpen, 0, 1) : 0.08;
   const blinkClosed =
     expressions.blink || (!faceDetected && Math.sin(timeMs / 190) > 0.97);
-
-  // The renderer now behaves like a face sticker: the absolute nose anchor is
-  // the source of truth, and only the face-sized tiger head is drawn.
   const centerX = anchorX;
   const centerY = anchorY + idleFloatY;
-  const faceUnit = (faceSize / 1.1) * pulse;
 
   ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.translate(centerX, centerY);
-  ctx.scale(faceUnit, faceUnit);
   ctx.rotate((tiltDegrees * Math.PI) / 180);
-  drawHead(ctx, {
-    mouthOpen,
+
+  drawMaskShadow(ctx, faceSize);
+  drawMaskImage(ctx, faceSize * pulse, activeMask);
+  drawMaskFace(ctx, faceSize * pulse, activeMask, {
     blinkClosed,
+    mouthOpen,
     happy: expressions.happy,
     tilt: expressions.tilt
   });
+
   ctx.restore();
 }
 
-function drawGlow(ctx, centerX, centerY, size, isRecording, isHappy) {
-  const gradient = ctx.createRadialGradient(
-    centerX,
-    centerY - size * 0.08,
-    size * 0.04,
-    centerX,
-    centerY - size * 0.08,
-    size * 0.34
-  );
-
-  gradient.addColorStop(0, isRecording ? "rgba(255, 127, 104, 0.55)" : "rgba(255, 231, 151, 0.56)");
-  gradient.addColorStop(0.45, isHappy ? "rgba(255, 178, 78, 0.24)" : "rgba(255, 178, 78, 0.18)");
-  gradient.addColorStop(1, "rgba(255, 178, 78, 0)");
-
+function drawMaskShadow(ctx, faceSize) {
   ctx.save();
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = "rgba(18, 11, 8, 0.14)";
   ctx.beginPath();
-  ctx.ellipse(centerX, centerY - size * 0.05, size * 0.32, size * 0.25, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, faceSize * 0.42, faceSize * 0.42, faceSize * 0.14, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
-function drawBody(ctx) {
-  ctx.save();
+function drawMaskImage(ctx, faceSize, mask) {
+  const stickerWidth = faceSize * mask.stickerWidthFactor;
+  const stickerHeight = faceSize * mask.stickerHeightFactor;
+  const drawX = -stickerWidth / 2;
+  const drawY = -stickerHeight * mask.anchorY;
 
-  ctx.fillStyle = ORANGE_MAIN;
-  ctx.beginPath();
-  ctx.ellipse(0, 0.38, 0.52, 0.46, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = CREAM;
-  ctx.beginPath();
-  ctx.ellipse(0, 0.42, 0.28, 0.24, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = ORANGE_DARK;
-  ctx.beginPath();
-  ctx.ellipse(-0.19, 0.76, 0.13, 0.11, -0.18, 0, Math.PI * 2);
-  ctx.ellipse(0.19, 0.76, 0.13, 0.11, 0.18, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
-function drawArms(ctx, timeMs) {
-  const armLift = Math.sin(timeMs / 420) * 0.03;
-
-  ctx.save();
-  ctx.strokeStyle = ORANGE_DARK;
-  ctx.lineCap = "round";
-  ctx.lineWidth = 0.12;
-
-  ctx.beginPath();
-  ctx.moveTo(-0.38, 0.2);
-  ctx.quadraticCurveTo(-0.64, 0.16 - armLift, -0.6, 0.44);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(0.38, 0.2);
-  ctx.quadraticCurveTo(0.64, 0.16 + armLift, 0.6, 0.44);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawHead(ctx, { mouthOpen, blinkClosed, happy, tilt }) {
-  ctx.save();
-  ctx.translate(0, -0.08);
-
-  drawEar(ctx, -0.37, -0.49, -0.3);
-  drawEar(ctx, 0.37, -0.49, 0.3);
-
-  ctx.fillStyle = ORANGE_MAIN;
-  ctx.beginPath();
-  ctx.arc(0, -0.02, 0.52, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = CREAM;
-  ctx.beginPath();
-  ctx.ellipse(0, 0.08, 0.33, 0.27, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  drawStripes(ctx);
-  drawCheeks(ctx, happy);
-  drawEyes(ctx, blinkClosed);
-  drawWhiskers(ctx);
-  drawMouth(ctx, mouthOpen, tilt);
-
-  ctx.restore();
-}
-
-function drawEar(ctx, x, y, rotation) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rotation);
-
-  ctx.fillStyle = ORANGE_MAIN;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 0.18, 0.22, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = PINK;
-  ctx.beginPath();
-  ctx.ellipse(0, 0.03, 0.1, 0.13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawStripes(ctx) {
-  ctx.save();
-  ctx.fillStyle = BROWN;
-
-  roundedStripe(ctx, 0, -0.47, 0.12, 0.2);
-  roundedStripe(ctx, -0.28, -0.22, 0.1, 0.18, -0.28);
-  roundedStripe(ctx, 0.28, -0.22, 0.1, 0.18, 0.28);
-
-  ctx.restore();
-}
-
-function roundedStripe(ctx, x, y, width, height, rotation = 0) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rotation);
-  ctx.beginPath();
-  ctx.roundRect(-width / 2, -height / 2, width, height, width / 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawCheeks(ctx, happy) {
-  ctx.save();
-  ctx.fillStyle = happy ? "rgba(255, 131, 120, 0.44)" : "rgba(255, 131, 120, 0.26)";
-
-  ctx.beginPath();
-  ctx.ellipse(-0.24, 0.12, 0.09, 0.06, -0.12, 0, Math.PI * 2);
-  ctx.ellipse(0.24, 0.12, 0.09, 0.06, 0.12, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
-function drawEyes(ctx, blinkClosed) {
-  ctx.save();
-  ctx.strokeStyle = BROWN;
-  ctx.fillStyle = BROWN_SOFT;
-  ctx.lineCap = "round";
-
-  if (blinkClosed) {
-    ctx.lineWidth = 0.045;
-
-    ctx.beginPath();
-    ctx.moveTo(-0.2, -0.05);
-    ctx.quadraticCurveTo(-0.12, 0.01, -0.04, -0.05);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0.04, -0.05);
-    ctx.quadraticCurveTo(0.12, 0.01, 0.2, -0.05);
-    ctx.stroke();
-  } else {
-    ctx.beginPath();
-    ctx.ellipse(-0.12, -0.03, 0.08, 0.11, 0, 0, Math.PI * 2);
-    ctx.ellipse(0.12, -0.03, 0.08, 0.11, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-    ctx.beginPath();
-    ctx.ellipse(-0.1, -0.07, 0.018, 0.028, -0.25, 0, Math.PI * 2);
-    ctx.ellipse(0.14, -0.07, 0.018, 0.028, -0.25, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawWhiskers(ctx) {
-  ctx.save();
-  ctx.strokeStyle = BROWN_SOFT;
-  ctx.lineWidth = 0.025;
-  ctx.lineCap = "round";
-
-  [-0.2, -0.14, 0.14, 0.2].forEach((offsetX) => {
-    const direction = Math.sign(offsetX);
-    const startX = direction * 0.14;
-
-    ctx.beginPath();
-    ctx.moveTo(startX, 0.16);
-    ctx.lineTo(offsetX + direction * 0.11, 0.12);
-    ctx.stroke();
-  });
-
-  ctx.restore();
-}
-
-function drawMouth(ctx, mouthOpen, tilt) {
-  ctx.save();
-  ctx.translate(0, 0.12);
-
-  ctx.fillStyle = BROWN;
-  ctx.beginPath();
-  ctx.arc(0, -0.02, 0.05, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = BROWN;
-  ctx.lineWidth = 0.03;
-  ctx.lineCap = "round";
-
-  ctx.beginPath();
-  ctx.moveTo(0, 0.02);
-  ctx.lineTo(0, 0.13);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(0, 0.13);
-  ctx.quadraticCurveTo(-0.09, 0.18, -0.16, 0.14);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(0, 0.13);
-  ctx.quadraticCurveTo(0.09, 0.18, 0.16, 0.14);
-  ctx.stroke();
-
-  if (mouthOpen > 0.18) {
-    // A continuous open amount makes the tiger feel like it is truly mirroring
-    // the user's face instead of only toggling between two mouth states.
-    const openHeight = 0.08 + mouthOpen * 0.17;
-
-    ctx.fillStyle = "#5a180b";
-    ctx.beginPath();
-    ctx.ellipse(0, 0.18, 0.11, openHeight, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = PINK;
-    ctx.beginPath();
-    ctx.ellipse(0, 0.24, 0.07, Math.max(0.04, openHeight * 0.45), tilt ? 0.12 : 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawSparkles(ctx, centerX, centerY, size, timeMs, active) {
-  if (!active) {
+  if (mask.image?.complete && mask.image.naturalWidth > 0) {
+    ctx.drawImage(mask.image, drawX, drawY, stickerWidth, stickerHeight);
     return;
   }
 
-  const sparklePoints = [
-    { x: -0.22, y: -0.26, phase: 0 },
-    { x: 0.28, y: -0.18, phase: 120 },
-    { x: -0.3, y: 0.02, phase: 240 }
-  ];
+  ctx.save();
+  ctx.fillStyle = "#ffc45d";
+  ctx.beginPath();
+  ctx.arc(0, 0, faceSize * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMaskFace(ctx, faceSize, mask, expressionState) {
+  drawCheeks(ctx, faceSize, mask, expressionState.happy);
+  drawEyes(ctx, faceSize, mask, expressionState.blinkClosed);
+  drawNose(ctx, faceSize, mask);
+  drawMouth(ctx, faceSize, mask, expressionState.mouthOpen, expressionState.tilt);
+
+  if (mask.whiskers) {
+    drawWhiskers(ctx, faceSize, mask);
+  }
+}
+
+function drawCheeks(ctx, faceSize, mask, happy) {
+  ctx.save();
+  ctx.fillStyle = enhanceAlpha(mask.cheekColor, happy ? 0.12 : 0);
+
+  ctx.beginPath();
+  ctx.ellipse(-faceSize * 0.24, faceSize * 0.1, faceSize * 0.12, faceSize * 0.075, -0.12, 0, Math.PI * 2);
+  ctx.ellipse(faceSize * 0.24, faceSize * 0.1, faceSize * 0.12, faceSize * 0.075, 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawEyes(ctx, faceSize, mask, blinkClosed) {
+  const eyeX = faceSize * mask.eyeSpacing;
+  const eyeY = faceSize * mask.eyeY;
+  const eyeWidth = faceSize * mask.eyeWidth;
+  const eyeHeight = faceSize * mask.eyeHeight;
 
   ctx.save();
-  ctx.fillStyle = "rgba(255, 248, 223, 0.92)";
+  ctx.strokeStyle = mask.featureColor;
+  ctx.fillStyle = mask.featureColor;
+  ctx.lineCap = "round";
 
-  sparklePoints.forEach((point) => {
-    const wave = 1 + Math.sin((timeMs + point.phase) / 240) * 0.25;
-    const x = centerX + point.x * size;
-    const y = centerY + point.y * size;
-    const radius = size * 0.016 * wave;
+  if (blinkClosed) {
+    ctx.lineWidth = faceSize * 0.04;
 
     ctx.beginPath();
-    ctx.moveTo(x, y - radius);
-    ctx.lineTo(x + radius * 0.35, y - radius * 0.35);
-    ctx.lineTo(x + radius, y);
-    ctx.lineTo(x + radius * 0.35, y + radius * 0.35);
-    ctx.lineTo(x, y + radius);
-    ctx.lineTo(x - radius * 0.35, y + radius * 0.35);
-    ctx.lineTo(x - radius, y);
-    ctx.lineTo(x - radius * 0.35, y - radius * 0.35);
-    ctx.closePath();
+    ctx.moveTo(-eyeX - eyeWidth * 0.65, eyeY);
+    ctx.quadraticCurveTo(-eyeX, eyeY + eyeHeight * 0.35, -eyeX + eyeWidth * 0.65, eyeY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(eyeX - eyeWidth * 0.65, eyeY);
+    ctx.quadraticCurveTo(eyeX, eyeY + eyeHeight * 0.35, eyeX + eyeWidth * 0.65, eyeY);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.ellipse(-eyeX, eyeY, eyeWidth, eyeHeight, 0, 0, Math.PI * 2);
+    ctx.ellipse(eyeX, eyeY, eyeWidth, eyeHeight, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = mask.eyeWhite;
+    ctx.beginPath();
+    ctx.ellipse(-eyeX + eyeWidth * 0.28, eyeY - eyeHeight * 0.35, eyeWidth * 0.2, eyeHeight * 0.24, -0.35, 0, Math.PI * 2);
+    ctx.ellipse(eyeX + eyeWidth * 0.28, eyeY - eyeHeight * 0.35, eyeWidth * 0.2, eyeHeight * 0.24, -0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawNose(ctx, faceSize, mask) {
+  const noseY = faceSize * mask.noseY;
+
+  ctx.save();
+  ctx.fillStyle = mask.noseColor;
+  ctx.beginPath();
+  ctx.ellipse(0, noseY, faceSize * 0.07, faceSize * 0.05, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMouth(ctx, faceSize, mask, mouthOpen, tilt) {
+  const mouthY = faceSize * mask.mouthY;
+
+  ctx.save();
+  ctx.translate(0, mouthY);
+  ctx.strokeStyle = mask.featureColor;
+  ctx.lineWidth = faceSize * 0.03;
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(0, -faceSize * 0.02);
+  ctx.lineTo(0, faceSize * 0.06);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(0, faceSize * 0.06);
+  ctx.quadraticCurveTo(-faceSize * 0.1, faceSize * 0.12, -faceSize * 0.16, faceSize * 0.08);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(0, faceSize * 0.06);
+  ctx.quadraticCurveTo(faceSize * 0.1, faceSize * 0.12, faceSize * 0.16, faceSize * 0.08);
+  ctx.stroke();
+
+  if (mouthOpen > 0.18) {
+    const openHeight = faceSize * (0.06 + mouthOpen * 0.12);
+
+    ctx.fillStyle = mask.mouthColor;
+    ctx.beginPath();
+    ctx.ellipse(0, faceSize * 0.12, faceSize * 0.13, openHeight, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = mask.tongueColor;
+    ctx.beginPath();
+    ctx.ellipse(
+      0,
+      faceSize * 0.17,
+      faceSize * 0.08,
+      Math.max(faceSize * 0.04, openHeight * 0.45),
+      tilt ? 0.14 : 0,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawWhiskers(ctx, faceSize, mask) {
+  const whiskerY = faceSize * 0.16;
+  const startX = faceSize * 0.13;
+
+  ctx.save();
+  ctx.strokeStyle = mask.featureColor;
+  ctx.lineWidth = faceSize * 0.018;
+  ctx.lineCap = "round";
+
+  [-1, 1].forEach((side) => {
+    [0.02, -0.03].forEach((offsetY, index) => {
+      ctx.beginPath();
+      ctx.moveTo(startX * side, whiskerY + faceSize * offsetY);
+      ctx.lineTo((startX + faceSize * (0.16 + index * 0.02)) * side, whiskerY + faceSize * (offsetY - 0.03));
+      ctx.stroke();
+    });
   });
 
   ctx.restore();
@@ -332,6 +240,19 @@ function drawSparkles(ctx, centerX, centerY, size, timeMs, active) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function enhanceAlpha(color, amount) {
+  const match = color.match(/rgba\(([^)]+)\)/);
+  if (!match) {
+    return color;
+  }
+
+  const parts = match[1].split(",").map((part) => part.trim());
+  const alpha = Number(parts[3] || "1");
+  const nextAlpha = clamp(alpha + amount, 0, 1);
+
+  return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${nextAlpha})`;
 }
 
 export default renderAvatar;

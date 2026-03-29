@@ -1,4 +1,4 @@
-const CACHE_NAME = "tiger-camera-pwa-v1";
+const CACHE_NAME = "tiger-camera-pwa-v2";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -7,7 +7,14 @@ const APP_ASSETS = [
   "./manifest.json",
   "./avatars/tiger/config.json",
   "./avatars/tiger/render.js",
-  "./icons/icon.svg"
+  "./icons/icon.svg",
+  "./masks/tiger.svg",
+  "./masks/elephant.svg",
+  "./masks/rabbit.svg",
+  "./masks/fox.svg",
+  "./masks/lion.svg",
+  "./masks/man.svg",
+  "./masks/woman.svg"
 ];
 
 self.addEventListener("install", (event) => {

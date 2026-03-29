@@ -20,6 +20,144 @@ const MOTION_CONFIG = Object.freeze({
   idleScale: 1,
   idleSize: 140
 });
+const MASK_DEFINITIONS = Object.freeze([
+  {
+    id: "tiger",
+    emoji: "🐯",
+    label: "호랑이",
+    src: "./masks/tiger.svg",
+    featureColor: "#5d2f11",
+    noseColor: "#5d2f11",
+    eyeWhite: "rgba(255, 255, 255, 0.92)",
+    cheekColor: "rgba(255, 137, 111, 0.32)",
+    mouthColor: "#5a180b",
+    tongueColor: "#ff8d93",
+    eyeY: -0.12,
+    mouthY: 0.2,
+    noseY: 0.08,
+    eyeSpacing: 0.22,
+    stickerWidthFactor: 1.52,
+    stickerHeightFactor: 1.52,
+    anchorY: 0.54,
+    whiskers: true
+  },
+  {
+    id: "elephant",
+    emoji: "🐘",
+    label: "코끼리",
+    src: "./masks/elephant.svg",
+    featureColor: "#44586f",
+    noseColor: "#44586f",
+    eyeWhite: "rgba(255, 255, 255, 0.92)",
+    cheekColor: "rgba(153, 172, 191, 0.24)",
+    mouthColor: "#405669",
+    tongueColor: "#ffadc2",
+    eyeY: -0.16,
+    mouthY: 0.12,
+    noseY: 0.01,
+    eyeSpacing: 0.23,
+    stickerWidthFactor: 1.68,
+    stickerHeightFactor: 1.62,
+    anchorY: 0.56
+  },
+  {
+    id: "rabbit",
+    emoji: "🐰",
+    label: "토끼",
+    src: "./masks/rabbit.svg",
+    featureColor: "#74586f",
+    noseColor: "#d16d8a",
+    eyeWhite: "rgba(255, 255, 255, 0.95)",
+    cheekColor: "rgba(255, 167, 196, 0.35)",
+    mouthColor: "#7c536f",
+    tongueColor: "#ff9db7",
+    eyeY: -0.11,
+    mouthY: 0.18,
+    noseY: 0.06,
+    eyeSpacing: 0.22,
+    stickerWidthFactor: 1.48,
+    stickerHeightFactor: 1.76,
+    anchorY: 0.58
+  },
+  {
+    id: "fox",
+    emoji: "🦊",
+    label: "여우",
+    src: "./masks/fox.svg",
+    featureColor: "#623014",
+    noseColor: "#623014",
+    eyeWhite: "rgba(255, 255, 255, 0.92)",
+    cheekColor: "rgba(255, 144, 94, 0.28)",
+    mouthColor: "#5f1e10",
+    tongueColor: "#ff9c86",
+    eyeY: -0.13,
+    mouthY: 0.18,
+    noseY: 0.07,
+    eyeSpacing: 0.22,
+    stickerWidthFactor: 1.54,
+    stickerHeightFactor: 1.55,
+    anchorY: 0.55,
+    whiskers: true
+  },
+  {
+    id: "lion",
+    emoji: "🦁",
+    label: "사자",
+    src: "./masks/lion.svg",
+    featureColor: "#6d3f14",
+    noseColor: "#6d3f14",
+    eyeWhite: "rgba(255, 255, 255, 0.92)",
+    cheekColor: "rgba(255, 187, 111, 0.24)",
+    mouthColor: "#6f2710",
+    tongueColor: "#ff9f74",
+    eyeY: -0.09,
+    mouthY: 0.2,
+    noseY: 0.08,
+    eyeSpacing: 0.22,
+    stickerWidthFactor: 1.78,
+    stickerHeightFactor: 1.72,
+    anchorY: 0.56
+  },
+  {
+    id: "man",
+    emoji: "👨",
+    label: "남자",
+    src: "./masks/man.svg",
+    featureColor: "#3e2a1f",
+    noseColor: "#89593d",
+    eyeWhite: "rgba(255, 255, 255, 0.94)",
+    cheekColor: "rgba(227, 152, 122, 0.15)",
+    mouthColor: "#8f5236",
+    tongueColor: "#ff9cad",
+    eyeY: -0.1,
+    mouthY: 0.19,
+    noseY: 0.07,
+    eyeSpacing: 0.2,
+    stickerWidthFactor: 1.44,
+    stickerHeightFactor: 1.54,
+    anchorY: 0.55
+  },
+  {
+    id: "woman",
+    emoji: "👩",
+    label: "여자",
+    src: "./masks/woman.svg",
+    featureColor: "#4c2d33",
+    noseColor: "#9d5d63",
+    eyeWhite: "rgba(255, 255, 255, 0.94)",
+    cheekColor: "rgba(236, 158, 171, 0.22)",
+    mouthColor: "#9b5462",
+    tongueColor: "#ff9db7",
+    eyeY: -0.11,
+    mouthY: 0.19,
+    noseY: 0.07,
+    eyeSpacing: 0.2,
+    stickerWidthFactor: 1.48,
+    stickerHeightFactor: 1.62,
+    anchorY: 0.56
+  }
+]);
+const MASK_IDS = MASK_DEFINITIONS.map(({ id }) => id);
 
 const LANDMARK_INDEX = Object.freeze({
   noseTip: 1,
@@ -41,6 +179,7 @@ const dom = {
   cameraStage: document.getElementById("cameraStage"),
   camera: document.getElementById("camera"),
   avatarCanvas: document.getElementById("avatarCanvas"),
+  maskSelector: document.getElementById("maskSelector"),
   cameraStatus: document.getElementById("cameraStatus"),
   recordStatus: document.getElementById("recordStatus"),
   recordTimer: document.getElementById("recordTimer"),
@@ -88,6 +227,11 @@ const state = {
   activeObjectUrl: null,
   resultOpen: false,
   recording: null,
+  maskAssets: {},
+  currentMaskKey: "tiger",
+  maskIndex: 0,
+  swipeStartX: 0,
+  swipeStartY: 0,
   motion: createMotionState(),
   metrics: createEmptyMetrics(),
   displayMetrics: createEmptyMetrics()
@@ -99,6 +243,7 @@ bindEvents();
 registerServiceWorker();
 disableCameraFogEffects();
 resizeVisibleCanvas();
+updateMaskSelection();
 updateUi();
 
 // Shared startup path: load avatar assets, MediaPipe, and camera only after the
@@ -138,16 +283,21 @@ async function startExperience() {
 }
 
 async function loadAvatar(name) {
-  if (state.avatarConfig && state.avatarRenderer) {
+  if (
+    state.avatarConfig &&
+    state.avatarRenderer &&
+    Object.keys(state.maskAssets).length === MASK_DEFINITIONS.length
+  ) {
     return;
   }
 
   const configUrl = `./avatars/${name}/config.json`;
   const renderUrl = `./avatars/${name}/render.js`;
 
-  const [configResponse, rendererModule] = await Promise.all([
+  const [configResponse, rendererModule, maskAssets] = await Promise.all([
     fetch(configUrl),
-    import(renderUrl)
+    import(renderUrl),
+    loadMaskAssets()
   ]);
 
   if (!configResponse.ok) {
@@ -156,6 +306,8 @@ async function loadAvatar(name) {
 
   state.avatarConfig = await configResponse.json();
   state.avatarRenderer = rendererModule.renderAvatar || rendererModule.default;
+  state.maskAssets = maskAssets;
+  updateMaskSelection();
 }
 
 async function initializeFaceLandmarker() {
@@ -342,6 +494,9 @@ function renderVisibleAvatar(timeMs) {
   const canvas = dom.avatarCanvas;
   const ctx = canvas.getContext("2d");
 
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   state.avatarRenderer(ctx, {
@@ -352,6 +507,7 @@ function renderVisibleAvatar(timeMs) {
     faceDetected: state.faceDetected,
     metrics: state.displayMetrics,
     motion: resolveMotionForCanvas(canvas.width, canvas.height, "cover"),
+    mask: getCurrentMaskAsset(),
     expressions: state.displayMetrics.expressions
   });
 }
@@ -584,6 +740,9 @@ function drawCompositeFrame({ canvas, width, height }) {
   const ctx = canvas.getContext("2d");
   const timeMs = performance.now();
 
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, width, height);
   ctx.save();
   ctx.translate(width, 0);
@@ -599,6 +758,7 @@ function drawCompositeFrame({ canvas, width, height }) {
       faceDetected: state.faceDetected,
       metrics: state.displayMetrics,
       motion: resolveMotionForCanvas(width, height, "fill"),
+      mask: getCurrentMaskAsset(),
       expressions: state.displayMetrics.expressions
     });
   }
@@ -1006,6 +1166,13 @@ function bindEvents() {
   dom.videoBtn.addEventListener("click", handleVideoButton);
   dom.closeResultBtn.addEventListener("click", closeResultSheet);
   dom.retakeBtn.addEventListener("click", closeResultSheet);
+  dom.maskSelector?.addEventListener("click", handleMaskSelectorClick);
+  dom.cameraStage?.addEventListener("touchstart", handleStageTouchStart, {
+    passive: true
+  });
+  dom.cameraStage?.addEventListener("touchend", handleStageTouchEnd, {
+    passive: true
+  });
   window.addEventListener("resize", resizeVisibleCanvas);
   window.addEventListener("orientationchange", resizeVisibleCanvas);
   document.addEventListener("visibilitychange", () => {
@@ -1018,6 +1185,119 @@ function bindEvents() {
 function disableCameraFogEffects() {
   document.querySelectorAll(".overlay, .blur-layer, .effect-layer, .backdrop-glow").forEach((element) => {
     element.style.display = "none";
+  });
+}
+
+async function loadMaskAssets() {
+  const entries = await Promise.all(
+    MASK_DEFINITIONS.map(async (maskDefinition) => [
+      maskDefinition.id,
+      {
+        ...maskDefinition,
+        image: await loadImageAsset(maskDefinition.src)
+      }
+    ])
+  );
+
+  return Object.fromEntries(entries);
+}
+
+function loadImageAsset(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Mask image load failed: ${src}`));
+    image.src = src;
+  });
+}
+
+function getCurrentMaskAsset() {
+  return (
+    state.maskAssets[state.currentMaskKey] ||
+    state.maskAssets[MASK_IDS[0]] ||
+    null
+  );
+}
+
+function handleMaskSelectorClick(event) {
+  const button = event.target.closest("[data-mask]");
+  if (!button) {
+    return;
+  }
+
+  changeMask(button.dataset.mask);
+}
+
+function handleStageTouchStart(event) {
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  state.swipeStartX = touch.clientX;
+  state.swipeStartY = touch.clientY;
+}
+
+function handleStageTouchEnd(event) {
+  const touch = event.changedTouches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  const deltaX = touch.clientX - state.swipeStartX;
+  const deltaY = touch.clientY - state.swipeStartY;
+
+  state.swipeStartX = 0;
+  state.swipeStartY = 0;
+
+  if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY)) {
+    return;
+  }
+
+  if (deltaX > 0) {
+    nextMask();
+  } else {
+    prevMask();
+  }
+}
+
+function changeMask(maskId, options = {}) {
+  if (!MASK_IDS.includes(maskId)) {
+    return;
+  }
+
+  state.currentMaskKey = maskId;
+  state.maskIndex = MASK_IDS.indexOf(maskId);
+  updateMaskSelection();
+
+  if (options.silent !== true && state.isReady) {
+    const mask = getCurrentMaskAsset();
+    if (mask) {
+      setStatus(`${mask.label} 마스크로 바꿨어요`);
+    }
+  }
+}
+
+function nextMask() {
+  const nextIndex = (state.maskIndex + 1) % MASK_IDS.length;
+  changeMask(MASK_IDS[nextIndex]);
+}
+
+function prevMask() {
+  const nextIndex = (state.maskIndex - 1 + MASK_IDS.length) % MASK_IDS.length;
+  changeMask(MASK_IDS[nextIndex]);
+}
+
+function updateMaskSelection() {
+  if (!dom.maskSelector) {
+    return;
+  }
+
+  dom.maskSelector.querySelectorAll("[data-mask]").forEach((button) => {
+    const selected = button.dataset.mask === state.currentMaskKey;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
   });
 }
 
