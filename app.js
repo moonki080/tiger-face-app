@@ -38,6 +38,7 @@ const LANDMARK_INDEX = Object.freeze({
 });
 
 const dom = {
+  cameraStage: document.getElementById("cameraStage"),
   camera: document.getElementById("camera"),
   avatarCanvas: document.getElementById("avatarCanvas"),
   compositeCanvas: document.getElementById("compositeCanvas"),
@@ -95,6 +96,7 @@ const state = {
 // canvas before the camera starts.
 bindEvents();
 registerServiceWorker();
+disableCameraFogEffects();
 resizeVisibleCanvas();
 updateUi();
 
@@ -115,6 +117,7 @@ async function startExperience() {
     await Promise.all([loadAvatar("tiger"), initializeFaceLandmarker(), startCamera()]);
 
     state.isReady = true;
+    disableCameraFogEffects();
     dom.introCard.classList.add("is-hidden");
     setStatus("표정을 따라하고 있어요");
     updateUi();
@@ -1000,6 +1003,12 @@ function bindEvents() {
     if (document.visibilityState === "hidden" && state.recording?.isActive) {
       stopRecording();
     }
+  });
+}
+
+function disableCameraFogEffects() {
+  document.querySelectorAll(".overlay, .blur-layer, .effect-layer, .backdrop-glow").forEach((element) => {
+    element.style.display = "none";
   });
 }
 

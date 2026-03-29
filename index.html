@@ -26,7 +26,7 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="camera-stage" aria-label="카메라와 캐릭터 화면">
+      <section id="cameraStage" class="camera-stage" aria-label="카메라와 캐릭터 화면">
         <video
           id="camera"
           class="mirror-layer"
@@ -37,8 +37,6 @@
         <canvas id="avatarCanvas" class="mirror-layer"></canvas>
         <canvas id="compositeCanvas" hidden></canvas>
         <canvas id="recordCanvas" hidden></canvas>
-
-        <div class="backdrop-glow" aria-hidden="true"></div>
 
         <header class="top-hud">
           <div class="badge badge-brand title-container">
