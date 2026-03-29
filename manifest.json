@@ -1,0 +1,17 @@
+{
+  "name": "따라해요! 호랑이 카메라",
+  "short_name": "호랑이카메라",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fff4d6",
+  "theme_color": "#ff8c3a",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

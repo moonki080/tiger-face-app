@@ -1,0 +1,8 @@
+{
+  "name": "tiger",
+  "expressions": {
+    "happy": "mouthOpen > 0.5",
+    "blink": "eyeBlink == true",
+    "tilt": "headTilt > 10"
+  }
+}

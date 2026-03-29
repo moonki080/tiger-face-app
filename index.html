@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>따라해요! 호랑이 카메라</title>
+    <meta name="theme-color" content="#ff8c3a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="호랑이카메라" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icons/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="camera-stage" aria-label="카메라와 캐릭터 화면">
+        <video
+          id="camera"
+          class="mirror-layer"
+          autoplay
+          muted
+          playsinline
+        ></video>
+        <canvas id="avatarCanvas" class="mirror-layer"></canvas>
+        <canvas id="compositeCanvas" hidden></canvas>
+        <canvas id="recordCanvas" hidden></canvas>
+
+        <div class="backdrop-glow" aria-hidden="true"></div>
+
+        <header class="top-hud">
+          <div class="badge badge-brand title-container">
+            <span class="badge-icon">🐯</span>
+            <span class="badge-text title-text">따라해요!</span>
+          </div>
+
+          <div class="hud-stack">
+            <div id="cameraStatus" class="badge badge-status">
+              카메라를 준비하고 있어요
+            </div>
+            <div id="recordStatus" class="badge badge-record" hidden>
+              <span class="record-dot"></span>
+              <span id="recordTimer">10초</span>
+            </div>
+          </div>
+        </header>
+
+        <section class="face-stats" aria-label="표정 반응 상태">
+          <div class="stat-pill" id="mouthPill">
+            <span class="stat-emoji">😮</span>
+            <strong id="mouthValue">0%</strong>
+          </div>
+          <div class="stat-pill" id="blinkPill">
+            <span class="stat-emoji">😉</span>
+            <strong id="blinkValue">대기</strong>
+          </div>
+          <div class="stat-pill" id="tiltPill">
+            <span class="stat-emoji">↗</span>
+            <strong id="tiltValue">0°</strong>
+          </div>
+        </section>
+
+        <div id="countdown" class="countdown" aria-live="assertive"></div>
+        <div id="flashLayer" class="flash-layer" aria-hidden="true"></div>
+
+        <section id="introCard" class="intro-card">
+          <div class="intro-bubble">
+            <p class="intro-kicker">표정을 보여줘!</p>
+            <h1 id="introTitle">호랑이랑 같이 찰칵</h1>
+            <p id="introCopy" class="intro-copy">
+              입을 벌리고, 눈을 깜빡이고, 고개를 살짝 기울여 보세요.
+            </p>
+            <button id="startCameraBtn" class="start-button" type="button">
+              카메라 시작
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="control-dock" aria-label="촬영 버튼">
+        <button
+          id="photoBtn"
+          class="action-button photo"
+          type="button"
+          aria-label="즉시 촬영"
+          disabled
+        >
+          <span class="action-icon">📸</span>
+          <span class="action-label">바로 촬영</span>
+        </button>
+
+        <button
+          id="timerBtn"
+          class="action-button timer"
+          type="button"
+          aria-label="3초 타이머 촬영"
+          disabled
+        >
+          <span class="action-icon">⏱</span>
+          <span class="action-label">3초 촬영</span>
+        </button>
+
+        <button
+          id="videoBtn"
+          class="action-button video"
+          type="button"
+          aria-label="10초 영상 촬영"
+          disabled
+        >
+          <span id="videoBtnIcon" class="action-icon">🎥</span>
+          <span id="videoBtnLabel" class="action-label">10초 녹화</span>
+        </button>
+      </section>
+
+      <aside id="resultSheet" class="result-sheet" aria-live="polite">
+        <div class="sheet-handle" aria-hidden="true"></div>
+
+        <div class="sheet-head">
+          <div>
+            <p id="resultKicker" class="sheet-kicker">미리보기</p>
+            <h2 id="resultTitle">촬영 완료</h2>
+          </div>
+          <button
+            id="closeResultBtn"
+            class="icon-button"
+            type="button"
+            aria-label="미리보기 닫기"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div id="resultPreview" class="sheet-preview"></div>
+
+        <div class="sheet-actions">
+          <a id="downloadLink" class="download-button" href="#" download>
+            저장하기
+          </a>
+          <button id="retakeBtn" class="secondary-button" type="button">
+            다시 놀기
+          </button>
+        </div>
+
+        <p id="resultNote" class="sheet-note">
+          iPhone에서는 길게 누르거나 공유 메뉴로 저장해 주세요.
+        </p>
+      </aside>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
